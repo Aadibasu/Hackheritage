@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Abhaya</title>
+    <title>Women's Safety App</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 </head>
 <body>
     <header>
-        <h1>Abhaya</h1>
+        <h1>Women's Safety App</h1>
     </header>
     <main>
         <section id="location-sharing">
@@ -19,29 +19,23 @@
             <p id="location-status">Location not available.</p>
         </section>
 
-
-    <!-- Add this button to your HTML -->
-<button id="open-google-maps">Open Google Maps</button>
-<br>
-       <br> <section id="map" style="height: 500px; width: 100%;">
+        <button id="open-google-maps">Open Google Maps</button>
+        <br><br>
+        
+        <section id="map" style="height: 500px; width: 100%;">
             <!-- Map will be displayed here -->
         </section>
 
+        <section id="sos-section">
+            <h2>Emergency SOS</h2>
+            <button id="sos-button" onclick="sendSOS()">SOS</button>
+        </section>
 
-        
-        <!-- Add this HTML below the map section -->
-<section id="sos-section">
-    <h2>Emergency SOS</h2>
-    <button id="sos-button" onclick="sendSOS()">SOS</button>
-</section>
-
-<!-- Add this section to your HTML -->
-<section id="radius-section">
-    <h2>Search Radius</h2>
-    <input type="range" id="radius-slider" min="1000" max="50000" step="1000" value="10000">
-    <label for="radius-slider" id="radius-label">Radius: 10,000 meters</label>
-</section>
-
+        <section id="radius-section">
+            <h2>Search Radius</h2>
+            <input type="range" id="radius-slider" min="1000" max="50000" step="1000" value="10000">
+            <label for="radius-slider" id="radius-label">Radius: 10,000 meters</label>
+        </section>
 
         <section id="safe-route">
             <h2>Safe Route Navigation</h2>
@@ -55,17 +49,13 @@
         <section id="resources">
             <h2>Resource Directory</h2>
             <p id="nearest-police-station">Nearest police station: Not available</p>
-            <ul id="police-list">
-                <!-- Police stations will be added here dynamically -->
-            </ul>
+            <ul id="police-list"></ul>
             <p id="nearest-hospital">Nearest hospital: Not available</p>
-            <ul id="hospital-list">
-                <!-- Hospitals will be added here dynamically -->
-            </ul>
+            <ul id="hospital-list"></ul>
             <p id="nearest-railway-station">Nearest railway station: Not available</p>
-            <ul id="transport-list">
-                <!-- Railway stations will be added here dynamically -->
-            </ul>
+            <ul id="transport-list"></ul>
+            <p id="nearest-bus-station">Nearest bus station: Not available</p>
+            <ul id="bus-stations-list"></ul>
         </section>
 
         <section id="emergency-contacts">
@@ -75,25 +65,18 @@
                 <input type="text" id="contact-phone" placeholder="Phone Number" required>
                 <button type="submit">Add Contact</button>
             </form>
-            <ul id="contacts-list">
-                <!-- Contacts will be added here dynamically -->
-            </ul>
+            <ul id="contacts-list"></ul>
         </section>
 
         <section id="safety-places">
             <h2>Safety Places</h2>
             <p id="nearest-hotel">Nearest hotel: Not available</p>
-            <ul id="safety-places-list">
-                <!-- Safety places including hotels will be added here dynamically -->
-            </ul>
+            <ul id="safety-places-list"></ul>
         </section>
-        
 
         <section id="high-alert-areas">
             <h2>High Alert Areas</h2>
-            <ul id="high-alert-areas-list">
-                <!-- High alert areas will be added here dynamically -->
-            </ul>
+            <ul id="high-alert-areas-list"></ul>
         </section>
     </main>
     <script src="script.js"></script>
