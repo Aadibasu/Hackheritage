@@ -5,6 +5,7 @@ let policeMarkers = [];
 let hospitalMarkers = [];
 let railwayMarkers = [];
 let hotelMarkers = [];
+let busMarkers = [];
 let searchRadius = 10000; // Default Radius in meters
 const emergencyContacts = []; // Initialize the emergency contacts array
 
@@ -32,6 +33,13 @@ const railwayIcon = L.icon({
 
 const hotelIcon = L.icon({
     iconUrl: 'police.png', // Path to your hotel icon
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
+    popupAnchor: [0, -30]
+});
+
+const busIcon = L.icon({
+    iconUrl: 'bus_station.png', // Path to your bus station icon
     iconSize: [30, 30],
     iconAnchor: [15, 30],
     popupAnchor: [0, -30]
@@ -93,13 +101,13 @@ function openGoogleMaps() {
     window.open(url, '_blank');
 }
 
-// Function to find and display nearest police stations, hospitals, railway stations, and hotels
+// Function to find and display nearest police stations, hospitals, railway stations, hotels, and bus stations
 function findNearestResources() {
     if (currentPosition.lat === 0 && currentPosition.lng === 0) {
         document.getElementById('nearest-police-station').textContent = 'Unable to find nearest resources.';
         document.getElementById('nearest-hospital').textContent = 'Unable to find nearest resources.';
         document.getElementById('nearest-railway-station').textContent = 'Unable to find nearest resources.';
-        document.getElementById('nearest-hotel').textContent = 'Unable to find nearest resources.';
+        document.getElementById('nearest-bus-station').textContent = 'Unable to find nearest resources.';
         return;
     }
 
@@ -108,43 +116,50 @@ function findNearestResources() {
     hospitalMarkers.forEach(marker => map.removeLayer(marker));
     railwayMarkers.forEach(marker => map.removeLayer(marker));
     hotelMarkers.forEach(marker => map.removeLayer(marker));
+    busMarkers.forEach(marker => map.removeLayer(marker));
     policeMarkers = [];
     hospitalMarkers = [];
     railwayMarkers = [];
     hotelMarkers = [];
+    busMarkers = [];
 
-    // Fetch nearest police stations
+    // Fetch nearest resources
     fetchResources('police', 'police-list', 'nearest-police-station', policeIcon);
-    
-    // Fetch nearest hospitals
     fetchResources('hospital', 'hospital-list', 'nearest-hospital', hospitalIcon);
-    
-    // Fetch nearest railway stations
     fetchResources('railway_station', 'transport-list', 'nearest-railway-station', railwayIcon);
-    
-    // Fetch nearest hotels
     fetchResources('hotel', 'safety-places-list', 'nearest-hotel', hotelIcon);
+    fetchResources('bus_station', 'bus-stations-list', 'nearest-bus-station', busIcon);
 }
 
-// Generic function to fetch resources (police, hospital, railway station, hotel) and update the map and list
+// Calculate distance between two geographic points
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; // Radius of Earth in kilometers
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
+// Fetch resources from Overpass API and update UI
 function fetchResources(type, listId, nearestId, icon) {
-    // Adjust query for railway stations and hotels
     const queryType = type === 'railway_station' ? 'railway=station' : (type === 'hotel' ? 'tourism=hotel' : `amenity=${type}`);
     const url = `https://overpass-api.de/api/interpreter?data=[out:json];node[${queryType}](around:${searchRadius},${currentPosition.lat},${currentPosition.lng});out;`;
 
-    console.log(`Fetching ${type} from URL: ${url}`); // Debugging: log URL to ensure it's correct
+    console.log(`Fetching ${type} from URL: ${url}`);
 
     fetch(url)
         .then(response => response.json())
         .then(data => {
-            console.log(`${type} data:`, data); // Log response data for debugging
+            console.log(`${type} data:`, data);
             const listElement = document.getElementById(listId);
-            listElement.innerHTML = ''; // Clear previous list items
+            listElement.innerHTML = '';
 
             let nearestResource = null;
             let minDistance = Infinity;
 
-            // Collect resources and distances
             const resourcesWithDistances = data.elements.map(item => {
                 const lat = item.lat;
                 const lon = item.lon;
@@ -152,25 +167,20 @@ function fetchResources(type, listId, nearestId, icon) {
                 return { ...item, distance };
             });
 
-            // Sort resources by distance
             resourcesWithDistances.sort((a, b) => a.distance - b.distance);
 
-            // Update the list and map with sorted data
             resourcesWithDistances.forEach(item => {
                 const lat = item.lat;
                 const lon = item.lon;
                 const distance = item.distance;
 
-                // Format the name properly for railway stations and hotels
                 const name = item.tags.name ? item.tags.name : type.replace('_', ' ').toUpperCase();
                 const formattedName = type === 'railway_station' ? `${name} station` : (type === 'hotel' ? `${name} hotel` : name);
 
-                // Add marker for each resource found
                 const marker = L.marker([lat, lon], { icon })
                     .addTo(map)
                     .bindPopup(`${formattedName}<br>Distance: ${distance.toFixed(2)} km`);
                 
-                // Add marker to the appropriate array
                 if (type === 'police') {
                     policeMarkers.push(marker);
                 } else if (type === 'hospital') {
@@ -179,21 +189,20 @@ function fetchResources(type, listId, nearestId, icon) {
                     railwayMarkers.push(marker);
                 } else if (type === 'hotel') {
                     hotelMarkers.push(marker);
+                } else if (type === 'bus_station') {
+                    busMarkers.push(marker);
                 }
 
-                // Add resource to the list with distance
                 const listItem = document.createElement('li');
                 listItem.textContent = `${formattedName} - ${distance.toFixed(2)} km`;
                 listElement.appendChild(listItem);
 
-                // Update nearest resource
                 if (distance < minDistance) {
                     minDistance = distance;
                     nearestResource = item;
                 }
             });
 
-            // Display nearest resource
             if (nearestResource) {
                 document.getElementById(nearestId).textContent = `Nearest ${type.replace('_', ' ')}: ${nearestResource.tags.name || 'Unknown'}, Distance: ${minDistance.toFixed(2)} km`;
             } else {
@@ -206,103 +215,58 @@ function fetchResources(type, listId, nearestId, icon) {
         });
 }
 
-// Function to calculate distance between two coordinates
-function calculateDistance(lat1, lng1, lat2, lng2) {
-    const R = 6371; // Radius of the Earth in kilometers
-    const dLat = toRad(lat2 - lat1);
-    const dLng = toRad(lng2 - lng1);
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-              Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * 
-              Math.sin(dLng / 2) * Math.sin(dLng / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c; // Distance in kilometers
+// Initialize the map
+initMap();
+
+// Event listeners for search radius slider
+document.getElementById('radius-slider').addEventListener('input', function() {
+    searchRadius = this.value;
+    document.getElementById('radius-label').textContent = `Radius: ${searchRadius} meters`;
+    findNearestResources(); // Update resources based on the new radius
+});
+
+// Event listeners for Google Maps button
+document.getElementById('open-google-maps').addEventListener('click', openGoogleMaps);
+
+// Handle SOS button click
+function sendSOS() {
+    alert('SOS has been sent!'); // Implement actual SOS functionality here
 }
 
-function toRad(degrees) {
-    return degrees * Math.PI / 180;
+// Find safe route function placeholder
+function findSafeRoute() {
+    alert('Safe route functionality is not implemented yet.');
 }
 
-// Add an emergency contact
-document.getElementById('contact-form').addEventListener('submit', function(event) {
-    event.preventDefault();
-    
+// Add event listener for contact form submission
+document.getElementById('contact-form').addEventListener('submit', function(e) {
+    e.preventDefault();
     const name = document.getElementById('contact-name').value;
     const phone = document.getElementById('contact-phone').value;
-    
     if (name && phone) {
-        emergencyContacts.push({ name, phone });
-        updateContactList();
-        
+        const contact = { name, phone };
+        emergencyContacts.push(contact);
+
+        // Create list item with delete button
+        const contactList = document.getElementById('contacts-list');
+        const listItem = document.createElement('li');
+        listItem.textContent = `${name} - ${phone}`;
+
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = 'Delete';
+        deleteButton.addEventListener('click', function() {
+            contactList.removeChild(listItem);
+            // Remove contact from the array
+            const index = emergencyContacts.indexOf(contact);
+            if (index > -1) {
+                emergencyContacts.splice(index, 1);
+            }
+        });
+
+        listItem.appendChild(deleteButton);
+        contactList.appendChild(listItem);
+
         document.getElementById('contact-name').value = '';
         document.getElementById('contact-phone').value = '';
     }
 });
-
-// Update the contact list with delete buttons
-function updateContactList() {
-    const contactList = document.getElementById('contacts-list');
-    contactList.innerHTML = ''; // Clear previous list items
-
-    emergencyContacts.forEach((contact, index) => {
-        const listItem = document.createElement('li');
-        listItem.textContent = `${contact.name} - ${contact.phone}`;
-        
-        // Create delete button
-        const deleteButton = document.createElement('button');
-        deleteButton.textContent = 'Delete';
-        deleteButton.onclick = () => deleteContact(index);
-
-        listItem.appendChild(deleteButton);
-        contactList.appendChild(listItem);
-    });
-}
-
-// Function to delete a contact
-function deleteContact(index) {
-    emergencyContacts.splice(index, 1);
-    updateContactList();
-}
-
-// SOS Functionality
-function sendSOS() {
-    if (currentPosition.lat === 0 && currentPosition.lng === 0) {
-        alert('Unable to determine your location.');
-        return;
-    }
-    
-    // Create the SOS message
-    const sosMessage = `SOS! I need help. My current location is Latitude: ${currentPosition.lat}, Longitude: ${currentPosition.lng}.`;
-
-    // Display an alert with the SOS message
-    alert(sosMessage);
-
-    // Optionally, you could send this message to a server or notify emergency contacts
-    // For example, you might send it via email, SMS, or a server endpoint
-    // For now, we'll just log it to the console
-    console.log('SOS Alert:', sosMessage);
-
-    // Optionally, you could also send the SOS message to the emergency contacts list
-    emergencyContacts.forEach(contact => {
-        console.log(`Sending SOS to ${contact.name} at ${contact.phone}`);
-        // Add actual sending logic here (e.g., using an API)
-    });
-}
-
-// Initialize map on page load
-window.onload = function() {
-    initMap();
-    getLocation(); // Ensure to call getLocation on page load
-
-    // Set up event listener for the radius slider
-    const radiusSlider = document.getElementById('radius-slider');
-    const radiusLabel = document.getElementById('radius-label');
-    
-    radiusSlider.addEventListener('input', function() {
-        searchRadius = parseInt(radiusSlider.value, 10);
-        radiusLabel.textContent = `Radius: ${searchRadius} meters`;
-        findNearestResources(); // Update resources based on the new radius
-    });
-
-    // Set up event listener for the Google Maps button
-    document.getElementById('open-google-maps').addEventListener('click', openGoogleMaps);
-};
